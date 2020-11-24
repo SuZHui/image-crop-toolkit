@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Image Crop Toolkit</title>
+</head>
+<body>
+  <input id="fileInput" type="file">
+  <button type="button" id="loadImageBtn">加载远端图片</button>
+  <div id="box">
+    <img id="imageContent" width="100" height="100">
+  </div>
+  <script src="../dist/bundle.umd.js"></script>
+  <script>
+    const loadImageBtn = document.querySelector('#loadImageBtn')
+    const box = document.querySelector('#box')
+    const image = document.querySelector('#imageContent')
+    document
+      .querySelector('#fileInput')
+      .addEventListener('change', e => {
+        console.dir(e.target)
+        const files = e.target.files
+        Toolkit
+          .Blob
+          .toDataUrl(files[0])
+          .then(fileReader => {
+            image.src = fileReader.result
+            return Toolkit.Blob.fromDataUrl(fileReader.result)
+          })
+          .then(blob => {
+            console.log(blob.size / 1024)
+          })
+      })
+    loadImageBtn
+      .addEventListener('click', () => {})
+  </script>
+</body>
+</html>
