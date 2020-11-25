@@ -134,28 +134,44 @@ function moveable (element, {
   onMove = () => {},
   onStart = () => {},
   onEnd = () => {}
-}, boundary = null) {
-  const position = {
+}, boundary) {
+  let position = {
     x: 0, y: 0
+  };
+  let padding = null;
+  // 获取鼠标在四周碰撞区域的可移动范围
+  const getBoundaryPadding = () => {
+    const boundaryRect = boundary.getBoundingClientRect();
+    const elementRect = element.getBoundingClientRect();
+    // debugger
+    const xMin = boundaryRect.left - elementRect.left;
+    const xMax = boundaryRect.right - elementRect.right;
+    const yMin = boundaryRect.top - elementRect.top;
+    const yMax = boundaryRect.bottom - elementRect.bottom;
+
+    return {
+      xMin, xMax,
+      yMin, yMax
+    }
   };
 
   const handleMove = e => {
     e.preventDefault();
+
+    let [x, y] = [e.pageX - position.x, e.pageY - position.y];
     if (boundary) {
-      // TODO: 设置边界判断
-      console.dir(boundary.getBoundingClientRect());
-    } else {
-      onMove({
-        x: -(position.x - e.pageX),
-        y: -(position.y - e.pageY)
-      }, e);
-    }
+      x = Math.min(Math.max(padding.xMin, x), padding.xMax);
+      y = Math.min(Math.max(padding.yMin, y), padding.yMax);
+    } 
+    onMove({ x, y }, e);
   };
   const handleEnd = e => {
-    onEnd({
-      x: -(position.x - e.pageX),
-      y: -(position.y - e.pageY)
-    }, e);
+    let [x, y] = [e.pageX - position.x, e.pageY - position.y];
+    if (boundary) {
+      x = Math.min(Math.max(padding.xMin, x), padding.xMax);
+      y = Math.min(Math.max(padding.yMin, y), padding.yMax);
+    } 
+    onEnd({ x, y }, e);
     window.removeEventListener('mousemove', handleMove);
     window.removeEventListener('mouseup', handleEnd);
   };
@@ -163,18 +179,27 @@ function moveable (element, {
   const handleStart = e => {
     window.addEventListener('mousemove', handleMove);
     window.addEventListener('mouseup', handleEnd);
-    position.x = e.pageX;
-    position.y = e.pageY;
+    if (boundary) {
+      padding = getBoundaryPadding();
+    }
+    position = { x: e.pageX, y: e.pageY };
     onStart(position, e);
   };
 
   element.addEventListener('mousedown', handleStart);
+
+  return function cancel () {
+    element.removeEventListener('mousedown', handleStart);
+    position = null;
+    padding = null;
+  }
 }
 
 const CROPPER_EVENT = {
   SIZE_CHANGE: 'sizeChange',
   PREVIEW_LOAD: 'previewLoad',
-  WHEEL: 'wheel'
+  WHEEL: 'wheel',
+  BEFORE_DESTROY: 'beforeDestroy'
 };
 
 class Preview {
@@ -342,10 +367,12 @@ class Controller {
   $position = {
     x: 0, y: 0
   }
+  $rect = {
+    cropBox: { width: 0, height: 0 }
+  }
 
   constructor (container) {
     this.$cropper = container;
-    console.dir(container);
     this._init();
   }
 
@@ -397,13 +424,16 @@ class Controller {
   }
 
   _mountEvent () {
-    moveable(this.$el.cropBox, {
+    const cancel = moveable(this.$el.cropBox, {
       onStart: (e) => {},
       onMove: e => {
-        this.setCropPosition({
-          x: this.$position.x + e.x,
-          y: this.$position.y + e.y
-        }, false);
+        const cropBoxRect = this.$rect.cropBox;
+        const rootRect = this.$cropper.$rect;
+        let [x, y] = [this.$position.x + e.x, this.$position.y + e.y];
+        const [width, height] = [rootRect.width - cropBoxRect.width, rootRect.height - cropBoxRect.height];
+        x = Math.max(Math.min(width, x), 0);
+        y = Math.max(Math.min(height, y), 0);
+        this.setCropPosition({ x, y }, false);
       },
       onEnd: e => {
         this.setCropPosition({
@@ -412,6 +442,9 @@ class Controller {
         });
       }
     }, this.$cropper.$container);
+
+    this.$cropper
+      .on(CROPPER_EVENT.BEFORE_DESTROY, () => cancel());
   }
 
   /**
@@ -422,6 +455,7 @@ class Controller {
   }
 
   setCropSize ({ width = 0, height = 0 }) {
+    this.$rect.cropBox = { width, height };
     setStyle(this.$el.cropBox, {
       width: `${width}px`, height: `${height}px`
     });
@@ -592,6 +626,11 @@ class Cropper extends EventEmitter {
   loadResource (resource) {
     // TODO: 目前只加载远端url
     this.preview.setURL(resource);
+  }
+
+  destroy () {
+    this.emit(CROPPER_EVENT.BEFORE_DESTROY);
+    // TODO: 释放内存
   }
 }
 

@@ -68,28 +68,44 @@ function moveable (element, {
   onMove = () => {},
   onStart = () => {},
   onEnd = () => {}
-}, boundary = null) {
-  const position = {
+}, boundary) {
+  let position = {
     x: 0, y: 0
+  }
+  let padding = null
+  // 获取鼠标在四周碰撞区域的可移动范围
+  const getBoundaryPadding = () => {
+    const boundaryRect = boundary.getBoundingClientRect()
+    const elementRect = element.getBoundingClientRect()
+    // debugger
+    const xMin = boundaryRect.left - elementRect.left
+    const xMax = boundaryRect.right - elementRect.right
+    const yMin = boundaryRect.top - elementRect.top
+    const yMax = boundaryRect.bottom - elementRect.bottom
+
+    return {
+      xMin, xMax,
+      yMin, yMax
+    }
   }
 
   const handleMove = e => {
     e.preventDefault()
+
+    let [x, y] = [e.pageX - position.x, e.pageY - position.y]
     if (boundary) {
-      // TODO: 设置边界判断
-      console.dir(boundary.getBoundingClientRect())
-    } else {
-      onMove({
-        x: -(position.x - e.pageX),
-        y: -(position.y - e.pageY)
-      }, e)
-    }
+      x = Math.min(Math.max(padding.xMin, x), padding.xMax)
+      y = Math.min(Math.max(padding.yMin, y), padding.yMax)
+    } 
+    onMove({ x, y }, e)
   }
   const handleEnd = e => {
-    onEnd({
-      x: -(position.x - e.pageX),
-      y: -(position.y - e.pageY)
-    }, e)
+    let [x, y] = [e.pageX - position.x, e.pageY - position.y]
+    if (boundary) {
+      x = Math.min(Math.max(padding.xMin, x), padding.xMax)
+      y = Math.min(Math.max(padding.yMin, y), padding.yMax)
+    } 
+    onEnd({ x, y }, e)
     window.removeEventListener('mousemove', handleMove)
     window.removeEventListener('mouseup', handleEnd)
   }
@@ -97,12 +113,20 @@ function moveable (element, {
   const handleStart = e => {
     window.addEventListener('mousemove', handleMove)
     window.addEventListener('mouseup', handleEnd)
-    position.x = e.pageX
-    position.y = e.pageY
+    if (boundary) {
+      padding = getBoundaryPadding()
+    }
+    position = { x: e.pageX, y: e.pageY }
     onStart(position, e)
   }
 
   element.addEventListener('mousedown', handleStart)
+
+  return function cancel () {
+    element.removeEventListener('mousedown', handleStart)
+    position = null
+    padding = null
+  }
 }
 
 export {

@@ -92,4 +92,9 @@ export class Cropper extends EventEmitter {
     // TODO: 目前只加载远端url
     this.preview.setURL(resource)
   }
+
+  destroy () {
+    this.emit(CROPPER_EVENT.BEFORE_DESTROY)
+    // TODO: 释放内存
+  }
 }

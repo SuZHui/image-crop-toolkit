@@ -1,4 +1,5 @@
-import { setStyle, moveable } from "../util/dom"
+import { setStyle, moveable } from '../util/dom'
+import { CROPPER_EVENT } from './constants'
 
 export class Controller {
   $cropper = null
@@ -11,10 +12,12 @@ export class Controller {
   $position = {
     x: 0, y: 0
   }
+  $rect = {
+    cropBox: { width: 0, height: 0 }
+  }
 
   constructor (container) {
     this.$cropper = container
-    console.dir(container)
     this._init()
   }
 
@@ -66,13 +69,16 @@ export class Controller {
   }
 
   _mountEvent () {
-    moveable(this.$el.cropBox, {
+    const cancel = moveable(this.$el.cropBox, {
       onStart: (e) => {},
       onMove: e => {
-        this.setCropPosition({
-          x: this.$position.x + e.x,
-          y: this.$position.y + e.y
-        }, false)
+        const cropBoxRect = this.$rect.cropBox
+        const rootRect = this.$cropper.$rect
+        let [x, y] = [this.$position.x + e.x, this.$position.y + e.y]
+        const [width, height] = [rootRect.width - cropBoxRect.width, rootRect.height - cropBoxRect.height]
+        x = Math.max(Math.min(width, x), 0)
+        y = Math.max(Math.min(height, y), 0)
+        this.setCropPosition({ x, y }, false)
       },
       onEnd: e => {
         this.setCropPosition({
@@ -81,6 +87,9 @@ export class Controller {
         })
       }
     }, this.$cropper.$container)
+
+    this.$cropper
+      .on(CROPPER_EVENT.BEFORE_DESTROY, () => cancel())
   }
 
   /**
@@ -91,6 +100,7 @@ export class Controller {
   }
 
   setCropSize ({ width = 0, height = 0 }) {
+    this.$rect.cropBox = { width, height }
     setStyle(this.$el.cropBox, {
       width: `${width}px`, height: `${height}px`
     })
