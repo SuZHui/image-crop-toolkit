@@ -48,8 +48,7 @@ export class Cropper extends EventEmitter {
     const cb = (entries) => {
       for(const entry of entries) {
         if (entry.target === this.$container) {
-          const { width = 0, height = 0 } = entry.contentRect
-          this.$rect = { width, height }
+          this.$rect = entry.contentRect
           this.emit(CROPPER_EVENT.SIZE_CHANGE, this.$rect)
         }
       }

@@ -64,49 +64,9 @@ function removeListener (element, type, listener, options = {}) {
   })
 }
 
-function moveable (element, {
-  onMove = () => {},
-  onStart = () => {},
-  onEnd = () => {}
-}) {
-  let position = {
-    x: 0, y: 0
-  }
-
-  const handleMove = e => {
-    e.preventDefault()
-
-    let [x, y] = [position.x - e.pageX, position.y - e.pageY]
-    onMove({ x, y }, e)
-  }
-  const handleEnd = e => {
-    e.preventDefault()
-    let [x, y] = [-(e.pageX - position.x), -(e.pageY - position.y)]
-    onEnd({ x, y }, e)
-    window.removeEventListener('mousemove', handleMove)
-    window.removeEventListener('mouseup', handleEnd)
-  }
-
-  const handleStart = e => {
-    e.preventDefault()
-    window.addEventListener('mousemove', handleMove)
-    window.addEventListener('mouseup', handleEnd)
-    position = { x: e.pageX, y: e.pageY }
-    onStart(position, e)
-  }
-
-  element.addEventListener('mousedown', handleStart)
-
-  return function cancel () {
-    element.removeEventListener('mousedown', handleStart)
-    position = null
-  }
-}
-
 export {
   clearChildren,
   setStyle,
   addListener,
-  removeListener,
-  moveable
+  removeListener
 }
