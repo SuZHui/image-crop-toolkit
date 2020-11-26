@@ -68,54 +68,29 @@ function moveable (element, {
   onMove = () => {},
   onStart = () => {},
   onEnd = () => {}
-}, boundary) {
+}) {
   let position = {
     x: 0, y: 0
-  }
-  let padding = null
-  // 获取鼠标在四周碰撞区域的可移动范围
-  const getBoundaryPadding = () => {
-    const boundaryRect = boundary.getBoundingClientRect()
-    const elementRect = element.getBoundingClientRect()
-    // debugger
-    const xMin = boundaryRect.left - elementRect.left
-    const xMax = boundaryRect.right - elementRect.right
-    const yMin = boundaryRect.top - elementRect.top
-    const yMax = boundaryRect.bottom - elementRect.bottom
-
-    return {
-      xMin, xMax,
-      yMin, yMax
-    }
   }
 
   const handleMove = e => {
     e.preventDefault()
 
-    let [x, y] = [e.pageX - position.x, e.pageY - position.y]
-    if (boundary) {
-      x = Math.min(Math.max(padding.xMin, x), padding.xMax)
-      y = Math.min(Math.max(padding.yMin, y), padding.yMax)
-    } 
+    let [x, y] = [position.x - e.pageX, position.y - e.pageY]
     onMove({ x, y }, e)
   }
   const handleEnd = e => {
-    let [x, y] = [e.pageX - position.x, e.pageY - position.y]
-    if (boundary) {
-      x = Math.min(Math.max(padding.xMin, x), padding.xMax)
-      y = Math.min(Math.max(padding.yMin, y), padding.yMax)
-    } 
+    e.preventDefault()
+    let [x, y] = [-(e.pageX - position.x), -(e.pageY - position.y)]
     onEnd({ x, y }, e)
     window.removeEventListener('mousemove', handleMove)
     window.removeEventListener('mouseup', handleEnd)
   }
 
   const handleStart = e => {
+    e.preventDefault()
     window.addEventListener('mousemove', handleMove)
     window.addEventListener('mouseup', handleEnd)
-    if (boundary) {
-      padding = getBoundaryPadding()
-    }
     position = { x: e.pageX, y: e.pageY }
     onStart(position, e)
   }
@@ -125,7 +100,6 @@ function moveable (element, {
   return function cancel () {
     element.removeEventListener('mousedown', handleStart)
     position = null
-    padding = null
   }
 }
 
