@@ -21,7 +21,9 @@ export default {
   ],
   plugins: [
     babel({
-      babelHelpers: "bundled"
+      babelHelpers: 'bundled',
+      exclude: 'node_modules/**',
+      extensions: ['.js', '.ts']
     }),
     nodeResolve(),
     // terser()

@@ -17,4 +17,4 @@ A mini toolkit for browser
 ### Canvas
 - toDataURL
 
-## TODO: Cropper组件 moveable函数待重构
+## TODO: Cropper组件

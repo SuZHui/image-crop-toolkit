@@ -1,30 +1,22 @@
-const DEFAULT_OPTIONS = {
-  onStart() {},
-  onMove() {},
-  onStop() {}
-}
+type MouseMoveOptions = Partial<Record<'onStart'|'onMove'|'onStop', (e: MouseEvent) => void>>;
 
-export function listenMouseMove (target, optons = DEFAULT_OPTIONS, boundary) {
-  if (boundary && !boundary.contains(element)) {
-    throw new Error('boundary不包含element')
-  }
-  
-  const handleMove = e => {
+export function listenMouseMove (target: HTMLElement, optons: MouseMoveOptions = {}) {
+  const handleMove = (e: MouseEvent) => {
     e.preventDefault()
-    optons.onMove(e)
+    optons.onMove && optons.onMove(e)
   }
-  const handleEnd = e => {
+  const handleEnd = (e: MouseEvent) => {
     e.preventDefault()
-    optons.onStop(e)
+    optons.onStop && optons.onStop(e)
     window.removeEventListener('mousemove', handleMove)
     window.removeEventListener('mouseup', handleEnd)
   }
 
-  const handleStart = e => {
+  const handleStart = (e: MouseEvent) => {
     e.preventDefault()
     window.addEventListener('mousemove', handleMove)
     window.addEventListener('mouseup', handleEnd)
-    optons.onStart(e)
+    optons.onStart && optons.onStart(e)
   }
 
   target.addEventListener('mousedown', handleStart)

@@ -1,7 +1,7 @@
 export class EventEmitter {
-  listeners = {}
+  listeners: {[key: string]: Function[]} = {}
 
-  on (event, cb) {
+  on (event: string, cb: Function) {
     const listeners = this.listeners
     if (listeners[event] instanceof Array) {
       if (listeners[event].indexOf(cb) === -1) {
@@ -12,7 +12,7 @@ export class EventEmitter {
     }
   }
 
-  emit (event, ...args) {
+  emit (event: string, ...args: any[]) {
     if (!this.listeners[event]) {
       return
     }
@@ -21,27 +21,27 @@ export class EventEmitter {
     })
   }
 
-  removeListener (event, listener) {
+  removeListener (event: string, listener: Function) {
     const listeners = this.listeners
     const arr = listeners[event] || []
     const index = arr.indexOf(listener)
     if (index >= 0) {
-      listeners[event].splice(i, 1)
+      listeners[event].splice(index, 1)
     }
   }
 
-  once (event, cb) {
-    const fn = (...args) => {
+  once (event: string, cb: Function) {
+    const fn = (...args: any[]) => {
       cb.apply(null, args)
       this.removeListener(event, fn)
     }
-    this.on(event, (...args) => {
+    this.on(event, (...args: any[]) => {
       cb.apply(null, args)
       this.removeListener(event, fn)
     })
   }
 
-  removeAllListener (event) {
+  removeAllListener (event: string) {
     this.listeners[event] = []
   }
 }

@@ -1,12 +1,12 @@
+import { Cropper } from './Cropper';
 import { setStyle } from '../util/dom'
 import { CROPPER_EVENT } from './constants'
 
 export class Preview {
-  $cropper = null
-  $el = {
-    wrapper: null,
-    image: null
-  }
+  $el: {
+    wrapper?: HTMLElement
+    image?: HTMLImageElement
+  } = {}
 
   $rect = {
     image: {
@@ -19,14 +19,11 @@ export class Preview {
     scale: 1,
   }
 
-  url = null
+  private url: string | null = null
 
-  constructor (crooper) {
-    this.$cropper = crooper
-    this._init()
-  }
+  private wheeling = false
 
-  _init () {
+  constructor (private $cropper: Cropper) {
     this.$el.wrapper = document.createElement('div')
     this.$el.image = new Image()
     this.$el.wrapper
@@ -37,16 +34,16 @@ export class Preview {
   }
 
   _initStyle () {
-    setStyle(this.$el.wrapper, {
-      backgroundImage: 'url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQAQMAAAAlPW0iAAAAA3NCSVQICAjb4U/gAAAABlBMVEXMzMz////TjRV2AAAACXBIWXMAAArrAAAK6wGCiw1aAAAAHHRFWHRTb2Z0d2FyZQBBZG9iZSBGaXJld29ya3MgQ1M26LyyjAAAABFJREFUCJlj+M/AgBVhF/0PAH6/D/HkDxOGAAAAAElFTkSuQmCC")',
+    setStyle(this.$el.wrapper!, {
+      'background-image': 'url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQAQMAAAAlPW0iAAAAA3NCSVQICAjb4U/gAAAABlBMVEXMzMz////TjRV2AAAACXBIWXMAAArrAAAK6wGCiw1aAAAAHHRFWHRTb2Z0d2FyZQBBZG9iZSBGaXJld29ya3MgQ1M26LyyjAAAABFJREFUCJlj+M/AgBVhF/0PAH6/D/HkDxOGAAAAAElFTkSuQmCC")',
       overflow: 'hidden',
       position: 'absolute',
-      top: 0, right: 0, bottom: 0, left: 0
+      top: '0', right: '0', bottom: '0', left: '0'
     })
 
-    setStyle(this.$el.image, {
+    setStyle(this.$el.image!, {
       position: 'absolute',
-      webkitUserDrag: 'none'
+      'webkit-user-drag': 'none'
     })
   }
   // 挂载事件
@@ -54,7 +51,7 @@ export class Preview {
     this.$cropper.on(CROPPER_EVENT.SIZE_CHANGE, this.onWrapperSizeChange.bind(this))
     this.$cropper.on(CROPPER_EVENT.WHEEL, this.onPreviewZoom.bind(this))
 
-    const image = this.$el.image
+    const image = this.$el.image!
     this.onImageLoad = this.onImageLoad.bind(this)
     this.onImageError = this.onImageError.bind(this)
     image.addEventListener('load', this.onImageLoad)
@@ -67,21 +64,21 @@ export class Preview {
   }
 
   onImageLoad () {
-    const [nw, nh] = [this.$el.image.naturalWidth, this.$el.image.naturalHeight]
+    const [nw, nh] = [this.$el.image!.naturalWidth, this.$el.image!.naturalHeight]
     this.$rect.image = { width: nw, height: nh }
-    this.$el.image.width = nw
-    this.$el.image.height = nh
+    this.$el.image!.width = nw
+    this.$el.image!.height = nh
 
     this.fullDisplayImage()
 
     this.$cropper.emit(CROPPER_EVENT.PREVIEW_LOAD)
   }
 
-  onImageError (err) {
+  onImageError (err: Event) {
     console.error(err)
   }
 
-  onPreviewZoom (e) {
+  onPreviewZoom (e: WheelEvent) {
     const ratio = 0.1
     let delta = 1
     e.preventDefault()
@@ -97,8 +94,6 @@ export class Preview {
 
     if (e.deltaY) {
       delta = e.deltaY > 0 ? 1 : -1;
-    } else if (e.wheelDelta) {
-      delta = -e.wheelDelta / 120;
     } else if (e.detail) {
       delta = e.detail > 0 ? 1 : -1;
     }
@@ -116,7 +111,7 @@ export class Preview {
     )
 
     this.$transform.scale = scaleRatio
-    setStyle(this.$el.image, {
+    setStyle(this.$el.image!, {
       left: `${(wrapperRect.width - imageRect.width)/2}px`,
       top: `${(wrapperRect.height - imageRect.height)/2}px`,
       transform: `scale(${scaleRatio})`
@@ -128,7 +123,7 @@ export class Preview {
    */
 
   getElement () {
-    return this.$el.wrapper
+    return this.$el.wrapper!
   }
 
   getImageRect () {
@@ -142,14 +137,14 @@ export class Preview {
     }
   }
 
-  setURL (url) {
+  setURL (url: string) {
     this.url = url
-    this.$el.image.src = url
+    this.$el.image!.src = url
   }
   // 缩放
-  zoom (ratio) {
+  zoom (ratio: number) {
     this.$transform.scale = this.$transform.scale * (1 + ratio)
-    setStyle(this.$el.image, {
+    setStyle(this.$el.image!, {
       transform: `scale(${this.$transform.scale})`
     })
   }

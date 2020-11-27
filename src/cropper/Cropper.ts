@@ -1,51 +1,58 @@
 import { clearChildren, setStyle } from '../util/dom'
 import { Preview } from './Preview'
 import { Controller } from './Controller'
-import { EventEmitter } from '../event-emitter/index'
+import { EventEmitter } from '../event-emitter/EventEmitter'
 import { CROPPER_EVENT } from './constants'
 
 export class Cropper extends EventEmitter {
-  // 主容器
-  $container = null
   // 图片预览窗口
-  preview = null
+  preview: Preview
   // 裁切栏
-  controller = null
+  controller: Controller
 
-  $rect = {
-    width: 0, height: 0
+  $rect: {
+    width: number
+    height: number
+    left: number
+    top: number
+  } & Partial<DOMRectReadOnly> = {
+    width: 0, height: 0, left: 0, top: 0
   }
 
-  constructor (container) {
-    if (!container) {
+  constructor (private $container: HTMLElement) {
+    super()
+    if (!this.$container) {
       throw new Error('container不存在！')
     }
-
-    super()
-    this.$container = container
-    clearChildren(container)
-
+    clearChildren(this.$container)
+    const rect = this.$container.getBoundingClientRect()
     // 初始化容器宽高
-    this.$rect = {
-      width: container.offsetWidth,
-      height: container.offsetHeight
-    }
+    this.$rect = rect
     this._initStyle()
     this._mountListener()
 
-    this._initPreview()
-    this._initContrller()
+    this.preview = new Preview(this)
+    this.$container
+      .append(
+        this.preview!.getElement()
+      )
+
+    this.controller = new Controller(this)
+    this.$container
+      .append(
+        this.controller!.getElement()
+        )
   }
 
   _initStyle () {
     setStyle(this.$container, {
       overflow: 'hidden',
       position: 'relative',
-      touchAction: 'none'
+      'touch-action': 'none'
     })
   }
   _mountListener () {
-    const cb = (entries) => {
+    const cb = (entries: ReadonlyArray<ResizeObserverEntry>) => {
       for(const entry of entries) {
         if (entry.target === this.$container) {
           this.$rect = entry.contentRect
@@ -63,31 +70,12 @@ export class Cropper extends EventEmitter {
       })
 
     this.on(CROPPER_EVENT.PREVIEW_LOAD, () => {
-      this.controller.setCropBoxCenter()
+      this.controller!.setCropBoxCenter()
     })
   }
 
-  _initPreview () {
-    this.preview = new Preview(this)
-
-    this.$container
-      .append(
-        this.preview.getElement()
-      )
-  }
-
-  _initContrller () {
-    this.controller = new Controller(this)
-
-    this.$container
-      .append(
-        this.controller.getElement()
-      )
-  }
-
-
   // methods
-  loadResource (resource) {
+  loadResource (resource: string) {
     // TODO: 目前只加载远端url
     this.preview.setURL(resource)
   }
