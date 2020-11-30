@@ -1,9 +1,10 @@
 import { terser } from 'rollup-plugin-terser'
 import babel from '@rollup/plugin-babel'
 import { nodeResolve } from '@rollup/plugin-node-resolve'
+import typescript from '@rollup/plugin-typescript'
 
 export default {
-  input: 'src/main.js',
+  input: 'src/main.ts',
   output: [
     {
       file: 'dist/bundle.umd.js',
@@ -20,10 +21,11 @@ export default {
     }
   ],
   plugins: [
+    typescript(),
     babel({
       babelHelpers: 'bundled',
-      exclude: 'node_modules/**',
-      extensions: ['.js', '.ts']
+      include: 'src/**',
+      extensions: ['.js']
     }),
     nodeResolve(),
     // terser()

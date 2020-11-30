@@ -17,4 +17,5 @@ A mini toolkit for browser
 ### Canvas
 - toDataURL
 
-## TODO: Cropper组件
+## Cropper组件
+- TODO: 四个角的整体缩放

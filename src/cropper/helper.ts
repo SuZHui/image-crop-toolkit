@@ -11,17 +11,20 @@ export function initControllerNodes ($cropper: Cropper) {
   const cropFace = document.createElement('span')
   cropFace.classList.add('crop-face')
 
-  const cropLineTop = document.createElement('span')
-  cropLineTop.classList.add('crop-line', 'line-top')
+  const cropLineN = document.createElement('span')
+  cropLineN.classList.add('crop-line', 'line-n')
 
-  const cropLineLeft = document.createElement('span')
-  cropLineLeft.classList.add('crop-line', 'line-left')
+  const cropLineW = document.createElement('span')
+  cropLineW.classList.add('crop-line', 'line-w')
 
-  const cropLineBottom = document.createElement('span')
-  cropLineBottom.classList.add('crop-line', 'line-bottom')
+  const cropLineS = document.createElement('span')
+  cropLineS.classList.add('crop-line', 'line-s')
 
-  const cropLineRight = document.createElement('span')
-  cropLineRight.classList.add('crop-line', 'line-right')
+  const cropLineE = document.createElement('span')
+  cropLineE.classList.add('crop-line', 'line-e')
+
+  const cropInfo = document.createElement('span')
+  cropInfo.classList.add('crop-info')
 
   setStyle(wrapper, {
     overflow: 'hidden',
@@ -55,28 +58,28 @@ export function initControllerNodes ($cropper: Cropper) {
   // 线宽
   const lineWeight = '2px'
   
-  setStyle(cropLineTop, {
+  setStyle(cropLineN, {
     ...commonLineStyles,
     cursor: 'ns-resize',
     height: lineWeight,
     left: '0',
     top: '0px'
   })
-  setStyle(cropLineLeft, {
+  setStyle(cropLineW, {
     ...commonLineStyles,
     cursor: 'ew-resize',
     left: '0px',
     top: '0',
     width: lineWeight
   })
-  setStyle(cropLineBottom, {
+  setStyle(cropLineS, {
     ...commonLineStyles,
     bottom: '0px',
     cursor: 'ns-resize',
     height: lineWeight,
     left: '0'
   })
-  setStyle(cropLineRight, {
+  setStyle(cropLineE, {
     ...commonLineStyles,
     cursor: 'ew-resize',
     right: '0px',
@@ -84,13 +87,25 @@ export function initControllerNodes ($cropper: Cropper) {
     width: lineWeight
   })
 
+  setStyle(cropInfo, {
+    position: 'absolute',
+    left: '0px',
+    'min-width': '64px',
+    'text-align': 'center',
+    color: '#fff',
+    'line-height': '20px',
+    'background-color': 'rgba(0, 0, 0, 0.8)',
+    'font-size': '12px'
+  })
+
   cropBox
     .append(
       cropFace,
-      cropLineTop,
-      cropLineLeft,
-      cropLineBottom,
-      cropLineRight,
+      cropLineN,
+      cropLineS,
+      cropLineW,
+      cropLineE,
+      cropInfo
     )
   wrapper
     .append(cropBox)
@@ -99,9 +114,10 @@ export function initControllerNodes ($cropper: Cropper) {
     wrapper,
     cropBox,
     cropFace,
-    cropLineTop,
-    cropLineLeft,
-    cropLineBottom,
-    cropLineRight
+    cropLineN,
+    cropLineS,
+    cropLineW,
+    cropLineE,
+    cropInfo
   }
 }
