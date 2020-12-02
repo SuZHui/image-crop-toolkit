@@ -11,9 +11,6 @@ type Rect = {
   top: number
 }
 
-// 线宽
-const CROP_LINE_WEIGHT = 2
-
 // 裁切线的移动方式
 enum CROP_LINE_MOVE_DIRECTION {
   // 所有方向
@@ -30,6 +27,19 @@ enum CROP_LINE_BASE_TARGET {
   SECOND = 2
 }
 
+enum CROP_POINT_POSITION {
+  TOP_LEFT = 1,
+  BOTTOM_LEFT = 2,
+  TOP_RIGHT = 3,
+  BOTTOM_RIGHT = 4,
+
+  CENTER_LEFT = 11,
+  CENTER_RIGHT = 22,
+
+  TOP_CENTER = 10,
+  BOTTOM_CENTER = 20,
+}
+
 export class Controller {
   private $el: {
     wrapper: HTMLElement,
@@ -40,7 +50,17 @@ export class Controller {
     cropLineS: HTMLElement,
     cropLineW: HTMLElement, 
     cropLineE: HTMLElement,
-    cropInfo: HTMLElement
+    // 左上角坐标显示
+    cropInfo: HTMLElement,
+    // 缩放点
+    cropPointN: HTMLElement,
+    cropPointW: HTMLElement,
+    cropPointS: HTMLElement,
+    cropPointE: HTMLElement,
+    cropPointNE: HTMLElement,
+    cropPointNW: HTMLElement,
+    cropPointSW: HTMLElement,
+    cropPointSE: HTMLElement
   }
   // 位置标记暂存
   $rect: {
@@ -94,6 +114,7 @@ export class Controller {
     })
 
     const cancelCropLineEvent = this._addCropLineEvent()
+    const cancelCropPointEvent = this._addCropPointEvent()
 
     // 容器大小改变时调整遮罩大小
     this.$cropper
@@ -106,10 +127,11 @@ export class Controller {
       .on(CROPPER_EVENT.BEFORE_DESTROY, () => {
         cancel()
         cancelCropLineEvent()
+        cancelCropPointEvent()
       })
   }
 
-  private cropLineEvent(direction: CROP_LINE_MOVE_DIRECTION, target: CROP_LINE_BASE_TARGET, e: MouseEvent) {
+  private getRectByLine (direction: CROP_LINE_MOVE_DIRECTION, target: CROP_LINE_BASE_TARGET, e: MouseEvent): Rect {
     const pageDir = direction === CROP_LINE_MOVE_DIRECTION.VERTICAL
       ? 'pageY' : 'pageX'
 
@@ -120,17 +142,17 @@ export class Controller {
 
     const highLimit = direction === CROP_LINE_MOVE_DIRECTION.VERTICAL ? this.$cropper.$rect.height : this.$cropper.$rect.width
     if (mouseToEdge < 0 || mouseToEdge > highLimit) {
-      return
+      return this.$rect.cropBox
     }
 
-    const currentRect: Partial<Rect> = {}
-    if (direction === CROP_LINE_MOVE_DIRECTION.VERTICAL) {
-      currentRect.left = this.$rect.cropBox.left
-      currentRect.width = this.$rect.cropBox.width
-    } else if (direction === CROP_LINE_MOVE_DIRECTION.HORIZONTAL) {
-      currentRect.top = this.$rect.cropBox.top
-      currentRect.height = this.$rect.cropBox.height
-    }
+    const currentRect: Rect = Object.assign({}, this.$rect.cropBox)
+    // if (direction === CROP_LINE_MOVE_DIRECTION.VERTICAL) {
+    //   currentRect.left = this.$rect.cropBox.left
+    //   currentRect.width = this.$rect.cropBox.width
+    // } else if (direction === CROP_LINE_MOVE_DIRECTION.HORIZONTAL) {
+    //   currentRect.top = this.$rect.cropBox.top
+    //   currentRect.height = this.$rect.cropBox.height
+    // }
 
     const cachedRect = this.$rect.cache
     const crossedLine = CROP_LINE_BASE_TARGET.FIRST === target
@@ -146,93 +168,137 @@ export class Controller {
 
     currentRect[distanceKey] = distance
     currentRect[sizeKey] = size
-    this.setCropRect(currentRect)
+    return currentRect
+  }
+
+  private getRectByPoint (position: CROP_POINT_POSITION, e: MouseEvent): Rect {
+    if (position % 10 === 0 || position % 11 === 0) {
+      // 单向移动 直接复用 crop line函数
+      const dir = position % 11 === 0 ? CROP_LINE_MOVE_DIRECTION.HORIZONTAL : CROP_LINE_MOVE_DIRECTION.VERTICAL
+      const target = position >= 20 ? CROP_LINE_BASE_TARGET.SECOND : CROP_LINE_BASE_TARGET.FIRST
+      return this.getRectByLine(dir, target, e)
+    } else {
+      // 双向移动
+      const isYFirst = position === CROP_POINT_POSITION.TOP_LEFT || position === CROP_POINT_POSITION.TOP_RIGHT
+      const isXFirst = position === CROP_POINT_POSITION.TOP_LEFT || position === CROP_POINT_POSITION.BOTTOM_LEFT
+      const rectV = this.getRectByLine(CROP_LINE_MOVE_DIRECTION.VERTICAL, isYFirst ? CROP_LINE_BASE_TARGET.FIRST : CROP_LINE_BASE_TARGET.SECOND, e)
+      const rectH = this.getRectByLine(CROP_LINE_MOVE_DIRECTION.HORIZONTAL, isXFirst ? CROP_LINE_BASE_TARGET.FIRST : CROP_LINE_BASE_TARGET.SECOND, e)
+      return {
+        top: rectV.top,
+        height: rectV.height,
+        left: rectH.left,
+        width: rectH.width
+      }
+    }
+  }
+
+  private getCropLineOption (dir: CROP_LINE_MOVE_DIRECTION, target: CROP_LINE_BASE_TARGET) {
+    return {
+      onMove: (e: MouseEvent) => {
+        const rect = this.getRectByLine(dir, target, e)
+        this.setCropRect(rect)
+      },
+      onStop: (e: MouseEvent) => this.clearRectCache(),
+      onStart: (e: MouseEvent) => {
+        // 阻止事件向下传播，阻止move事件触发
+        e.stopImmediatePropagation()
+        this.setRectCache(this.$rect.cropBox)
+      }
+    }
+  }
+
+  private getCropPointOption (pos: CROP_POINT_POSITION) {
+    return {
+      onMove: (e: MouseEvent) => {
+        const rect = this.getRectByPoint(pos, e)
+        this.setCropRect(rect)
+      },
+      onStop: () => this.clearRectCache(),
+      onStart: (e: MouseEvent) => {
+        e.stopImmediatePropagation()
+        this.setRectCache(this.$rect.cropBox)
+      }
+    }
   }
 
   private _addCropLineEvent () {
-    const handleTopLine = listenMouseMove(this.$el.cropLineN, {
-      onMove: (e: MouseEvent) => {
-        // 鼠标当前位置到达容器的上边距
-        const mouseY2Top = e.pageY - this.$cropper.$rect.top
-        if (mouseY2Top < 0 || mouseY2Top > this.$cropper.$rect.height) return
-        const currentRect: Partial<Rect> = {
-          left: this.$rect.cropBox.left,
-          width: this.$rect.cropBox.width
-        }
-        const cachedRect = this.$rect.cache
-        // 南线距离顶部的数值
-        // 该值为分割线值
-        // 如果鼠标当前位置大于该值 则表示裁切进入反向模式 此时鼠标位置变化不会改变top高度 只会增加 rect.height
-        // 如果鼠标当前位置小于等于该值 则表示裁切在正常模式 此时鼠标位置的变化会同时改变top和height的数字 以保证它们相加会等于sLineTop
-        const sLineTop = cachedRect.top + cachedRect.height
+    const handleTopLine = listenMouseMove(
+      this.$el.cropLineN,
+      this.getCropLineOption(CROP_LINE_MOVE_DIRECTION.VERTICAL, CROP_LINE_BASE_TARGET.FIRST)
+    )
+    
+    const handleBottomLine = listenMouseMove(
+      this.$el.cropLineS,
+      this.getCropLineOption(CROP_LINE_MOVE_DIRECTION.VERTICAL, CROP_LINE_BASE_TARGET.SECOND)
+    )
+    
+    const handleLeftLine = listenMouseMove(
+      this.$el.cropLineW,
+      this.getCropLineOption(CROP_LINE_MOVE_DIRECTION.HORIZONTAL, CROP_LINE_BASE_TARGET.FIRST)
+    )
 
-        const [top, height] = mouseY2Top <= sLineTop
-          ? (() => {
-            const h = sLineTop - mouseY2Top
-            return [sLineTop -h, h]
-          })()
-          : [sLineTop, mouseY2Top - sLineTop]
-
-        currentRect.top = top
-        currentRect.height = height
-        this.setCropRect(currentRect)
-      },
-      onStop: (e: MouseEvent) => {
-        this.clearRectCache()
-      },
-      onStart: (e: MouseEvent) => {
-        // 阻止事件向下传播，阻止move事件触发
-        e.stopImmediatePropagation()
-        this.setRectCache(this.$rect.cropBox)
-      }
-    })
-
-    const handleBottomLine = listenMouseMove(this.$el.cropLineS, {
-      onMove: (e: MouseEvent) => {
-        this.cropLineEvent(CROP_LINE_MOVE_DIRECTION.VERTICAL, CROP_LINE_BASE_TARGET.SECOND, e)
-      },
-      onStop: (e: MouseEvent) => {
-        this.clearRectCache()
-      },
-      onStart: (e: MouseEvent) => {
-        // 阻止事件向下传播，阻止move事件触发
-        e.stopImmediatePropagation()
-        this.setRectCache(this.$rect.cropBox)
-      }
-    })
-
-    const handleLeftLine = listenMouseMove(this.$el.cropLineW, {
-      onMove: (e: MouseEvent) => {
-        this.cropLineEvent(CROP_LINE_MOVE_DIRECTION.HORIZONTAL, CROP_LINE_BASE_TARGET.FIRST, e)
-      },
-      onStop: (e: MouseEvent) => {
-        this.clearRectCache()
-      },
-      onStart: (e: MouseEvent) => {
-        // 阻止事件向下传播，阻止move事件触发
-        e.stopImmediatePropagation()
-        this.setRectCache(this.$rect.cropBox)
-      }
-    })
-
-    const handleRightLine = listenMouseMove(this.$el.cropLineE, {
-      onMove: (e: MouseEvent) => {
-        this.cropLineEvent(CROP_LINE_MOVE_DIRECTION.HORIZONTAL, CROP_LINE_BASE_TARGET.SECOND, e)
-      },
-      onStop: (e: MouseEvent) => {
-        this.clearRectCache()
-      },
-      onStart: (e: MouseEvent) => {
-        // 阻止事件向下传播，阻止move事件触发
-        e.stopImmediatePropagation()
-        this.setRectCache(this.$rect.cropBox)
-      }
-    })
+    const handleRightLine = listenMouseMove(
+      this.$el.cropLineE,
+      this.getCropLineOption(CROP_LINE_MOVE_DIRECTION.HORIZONTAL, CROP_LINE_BASE_TARGET.SECOND)
+    )
     return function cancel () {
       handleTopLine.cancel()
       handleBottomLine.cancel()
       handleLeftLine.cancel()
       handleRightLine.cancel()
+    }
+  }
+
+  private _addCropPointEvent () {
+    const handlePointN = listenMouseMove(
+      this.$el.cropPointN,
+      this.getCropPointOption(CROP_POINT_POSITION.TOP_CENTER)
+    )
+
+    const handlePointS = listenMouseMove(
+      this.$el.cropPointS,
+      this.getCropPointOption(CROP_POINT_POSITION.BOTTOM_CENTER)
+    )
+
+    const handlePointW = listenMouseMove(
+      this.$el.cropPointW,
+      this.getCropPointOption(CROP_POINT_POSITION.CENTER_LEFT)
+    )
+
+    const handlePointE = listenMouseMove(
+      this.$el.cropPointE,
+      this.getCropPointOption(CROP_POINT_POSITION.CENTER_RIGHT)
+    )
+
+    const handlePointNW = listenMouseMove(
+      this.$el.cropPointNW,
+      this.getCropPointOption(CROP_POINT_POSITION.TOP_LEFT)
+    )
+    
+    const handlePointNE = listenMouseMove(
+      this.$el.cropPointNE,
+      this.getCropPointOption(CROP_POINT_POSITION.TOP_RIGHT)
+    )
+    
+    const handlePointSW = listenMouseMove(
+      this.$el.cropPointSW,
+      this.getCropPointOption(CROP_POINT_POSITION.BOTTOM_LEFT)
+    )
+    
+    const handlePointSE = listenMouseMove(
+      this.$el.cropPointSE, 
+      this.getCropPointOption(CROP_POINT_POSITION.BOTTOM_RIGHT)
+    )
+
+    return function cancel () {
+      handlePointN.cancel()
+      handlePointS.cancel()
+      handlePointW.cancel()
+      handlePointE.cancel()
+      handlePointNW.cancel()
+      handlePointNE.cancel()
+      handlePointSW.cancel()
+      handlePointSE.cancel()
     }
   }
 

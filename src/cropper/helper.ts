@@ -1,6 +1,106 @@
 import { setStyle } from '../util/dom'
 import { Cropper } from './Cropper'
 
+function initPoint () {
+  const cropPointN = document.createElement('span')
+  cropPointN.classList.add('crop-point', 'point-n')
+
+  const cropPointW = document.createElement('span')
+  cropPointW.classList.add('crop-point', 'point-w')
+
+  const cropPointS = document.createElement('span')
+  cropPointS.classList.add('crop-point', 'point-s')
+
+  const cropPointE = document.createElement('span')
+  cropPointE.classList.add('crop-point', 'point-e')
+
+  const cropPointNE = document.createElement('span')
+  cropPointNE.classList.add('crop-point', 'point-ne')
+
+  const cropPointNW = document.createElement('span')
+  cropPointNW.classList.add('crop-point', 'point-nw')
+
+  const cropPointSW = document.createElement('span')
+  cropPointSW.classList.add('crop-point', 'point-sw')
+
+  const cropPointSE = document.createElement('span')
+  cropPointSE.classList.add('crop-point', 'point-se')
+
+  const commonStyle = {
+    'background-color': '#39f',
+    height: '5px',
+    opacity: '0.75',
+    width: '5px',
+    position: 'absolute'
+  }
+
+  const padding = '-2px'
+
+  setStyle(cropPointN, {
+    ...commonStyle,
+    cursor: 'ns-resize',
+    left: '50%',
+    'margin-left': padding,
+    top: padding
+  })
+  setStyle(cropPointW, {
+    ...commonStyle,
+    cursor: 'ew-resize',
+    top: '50%',
+    'margin-top': padding,
+    left: padding
+  })
+  setStyle(cropPointE, {
+    ...commonStyle,
+    cursor: 'ew-resize',
+    top: '50%',
+    'margin-top': padding,
+    right: padding
+  })
+  setStyle(cropPointS, {
+    ...commonStyle,
+    cursor: 's-resize',
+    left: '50%',
+    'margin-left': padding,
+    bottom: padding
+  })
+  setStyle(cropPointNE, {
+    ...commonStyle,
+    cursor: 'nesw-resize',
+    top: padding,
+    right: padding
+  })
+  setStyle(cropPointNW, {
+    ...commonStyle,
+    cursor: 'nwse-resize',
+    top: padding,
+    left: padding
+  })
+  setStyle(cropPointSW, {
+    ...commonStyle,
+    cursor: 'nesw-resize',
+    bottom: padding,
+    left: padding
+  })
+  setStyle(cropPointSE, {
+    ...commonStyle,
+    cursor: 'nwse-resize',
+    bottom: padding,
+    right: padding
+  })
+
+  return {
+    cropPointN,
+    cropPointW,
+    cropPointS,
+    cropPointE,
+    cropPointNE,
+    cropPointNW,
+    cropPointSW,
+    cropPointSE
+  }
+}
+
 export function initControllerNodes ($cropper: Cropper) {
   const wrapper = document.createElement('div')
   wrapper.classList.add('cropper_controller')
@@ -38,65 +138,70 @@ export function initControllerNodes ($cropper: Cropper) {
     top: '0', right: '0', bottom: '0', left: '0',
     outline: `${Math.max($cropper.$rect.width, $cropper.$rect.height)}px solid rgba(0,0,0,0.5)`
   })
+  // 线宽
+  const lineWeight = '1px'
+  // 可触碰宽度
+  const lineOperableWeight = '4px'
   setStyle(cropFace, {
     left: '0',
     top: '0',
     cursor: 'move',
     display: 'block',
     width: '100%',
-    height: '100%'
+    height: '100%',
+    border: `${lineWeight} solid rgba(51, 153, 255, 0.6)`,
+    'box-sizing': 'border-box'
   })
   
   const commonLineStyles = {
-    'background-color': '#39f',
     display: 'block',
     height: '100%',
-    opacity: '0.4',
     position: 'absolute',
     width: '100%'
   }
-  // 线宽
-  const lineWeight = '2px'
   
   setStyle(cropLineN, {
     ...commonLineStyles,
     cursor: 'ns-resize',
-    height: lineWeight,
+    height: lineOperableWeight,
     left: '0',
-    top: '0px'
+    top: '-1px'
   })
   setStyle(cropLineW, {
     ...commonLineStyles,
     cursor: 'ew-resize',
-    left: '0px',
+    left: '-1px',
     top: '0',
-    width: lineWeight
+    width: lineOperableWeight
   })
   setStyle(cropLineS, {
     ...commonLineStyles,
-    bottom: '0px',
+    bottom: '-1px',
     cursor: 'ns-resize',
-    height: lineWeight,
+    height: lineOperableWeight,
     left: '0'
   })
   setStyle(cropLineE, {
     ...commonLineStyles,
     cursor: 'ew-resize',
-    right: '0px',
+    right: '-1px',
     top: '0',
-    width: lineWeight
+    width: lineOperableWeight
   })
 
   setStyle(cropInfo, {
+    'user-select': 'none',
     position: 'absolute',
     left: '0px',
     'min-width': '64px',
     'text-align': 'center',
     color: '#fff',
     'line-height': '20px',
-    'background-color': 'rgba(0, 0, 0, 0.8)',
+    'background-color': 'rgba(0, 0, 0, 0.6)',
     'font-size': '12px'
   })
+
+  const points = initPoint()
 
   cropBox
     .append(
@@ -105,6 +210,7 @@ export function initControllerNodes ($cropper: Cropper) {
       cropLineS,
       cropLineW,
       cropLineE,
+      ...Object.values(points),
       cropInfo
     )
   wrapper
@@ -118,6 +224,7 @@ export function initControllerNodes ($cropper: Cropper) {
     cropLineS,
     cropLineW,
     cropLineE,
-    cropInfo
+    cropInfo,
+    ...points
   }
 }

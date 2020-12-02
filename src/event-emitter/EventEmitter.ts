@@ -1,5 +1,5 @@
 export class EventEmitter {
-  listeners: {[key: string]: Function[]} = {}
+  private listeners: {[key: string]: Function[]} = {}
 
   on (event: string, cb: Function) {
     const listeners = this.listeners
